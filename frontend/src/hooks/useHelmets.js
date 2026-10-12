@@ -1,3 +1,7 @@
+﻿// ==================================================
+// useHelmets — Data-fetching hook
+// ==================================================
+
 import { useEffect, useState, useCallback } from 'react';
 import { helmetService } from '../services/helmetService.js';
 import { getErrorMessage } from '../services/api.js';
