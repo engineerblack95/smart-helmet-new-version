@@ -1,0 +1,214 @@
+// ==================================================
+// Smart Helmet System — Prisma Schema
+// Database: PostgreSQL
+// ==================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================================================
+// ENUMS
+// ==================================================
+
+enum UserRole {
+  ADMIN
+  OWNER
+  RIDER
+}
+
+enum ViolationType {
+  NO_HELMET
+  ALCOHOL_DETECTED
+  WRONG_HELMET
+  SENSOR_MALFUNCTION
+  DEVICE_OFFLINE
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum RideStatus {
+  ACTIVE
+  COMPLETED
+  BLOCKED
+  CANCELLED
+}
+
+enum AlertStatus {
+  PENDING
+  SENT
+  FAILED
+  RESOLVED
+}
+
+enum DeviceStatus {
+  ONLINE
+  OFFLINE
+  MAINTENANCE
+}
+
+// ==================================================
+// MODELS
+// ==================================================
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  fullName     String   @map("full_name")
+  phone        String?
+  role         UserRole @default(RIDER)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  helmets    Helmet[]
+  bikes      Bike[]
+  rides      Ride[]
+  violations Violation[]
+
+  @@map("users")
+}
+
+model Helmet {
+  id           String       @id @default(uuid())
+  helmetCode   String       @unique @map("helmet_code")
+  ownerId      String?      @map("owner_id")
+  batteryLevel Int          @default(100) @map("battery_level")
+  isActive     Boolean      @default(true) @map("is_active")
+  status       DeviceStatus @default(OFFLINE)
+  lastSeenAt   DateTime?    @map("last_seen_at")
+  firmwareVer  String?      @map("firmware_ver")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  owner      User?       @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  bike       Bike?
+  rides      Ride[]
+  sensorLogs SensorLog[]
+  violations Violation[]
+
+  @@map("helmets")
+}
+
+model Bike {
+  id          String       @id @default(uuid())
+  bikeCode    String       @unique @map("bike_code")
+  ownerId     String?      @map("owner_id")
+  helmetId    String?      @unique @map("helmet_id")
+  plateNumber String?      @unique @map("plate_number")
+  isActive    Boolean      @default(true) @map("is_active")
+  status      DeviceStatus @default(OFFLINE)
+  lastSeenAt  DateTime?    @map("last_seen_at")
+  firmwareVer String?      @map("firmware_ver")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  owner  User?   @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  helmet Helmet? @relation(fields: [helmetId], references: [id], onDelete: SetNull)
+  rides  Ride[]
+
+  @@map("bikes")
+}
+
+model Ride {
+  id              String     @id @default(uuid())
+  riderId         String?    @map("rider_id")
+  helmetId        String     @map("helmet_id")
+  bikeId          String     @map("bike_id")
+  status          RideStatus @default(ACTIVE)
+  startTime       DateTime   @default(now()) @map("start_time")
+  endTime         DateTime?  @map("end_time")
+  durationSec     Int?       @map("duration_sec")
+  totalViolations Int        @default(0) @map("total_violations")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  rider      User?       @relation(fields: [riderId], references: [id], onDelete: SetNull)
+  helmet     Helmet      @relation(fields: [helmetId], references: [id], onDelete: Cascade)
+  bike       Bike        @relation(fields: [bikeId], references: [id], onDelete: Cascade)
+  sensorLogs SensorLog[]
+  violations Violation[]
+
+  @@map("rides")
+}
+
+model SensorLog {
+  id              String   @id @default(uuid())
+  helmetId        String   @map("helmet_id")
+  rideId          String?  @map("ride_id")
+  worn            Boolean  @default(false)
+  alcoholDetected Boolean  @default(false) @map("alcohol_detected")
+  alcoholLevel    Int      @default(0) @map("alcohol_level")
+  batteryLevel    Int?     @map("battery_level")
+  engineAllowed   Boolean  @default(false) @map("engine_allowed")
+  relayState      Boolean  @default(false) @map("relay_state")
+  timestamp       DateTime @default(now())
+
+  helmet Helmet @relation(fields: [helmetId], references: [id], onDelete: Cascade)
+  ride   Ride?  @relation(fields: [rideId], references: [id], onDelete: SetNull)
+
+  @@index([helmetId, timestamp])
+  @@map("sensor_logs")
+}
+
+model Violation {
+  id           String        @id @default(uuid())
+  helmetId     String        @map("helmet_id")
+  riderId      String?       @map("rider_id")
+  rideId       String?       @map("ride_id")
+  type         ViolationType
+  severity     Severity      @default(MEDIUM)
+  description  String?
+  alcoholLevel Int?          @map("alcohol_level")
+  isResolved   Boolean       @default(false) @map("is_resolved")
+  resolvedAt   DateTime?     @map("resolved_at")
+  resolvedBy   String?       @map("resolved_by")
+  timestamp    DateTime      @default(now())
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  helmet Helmet  @relation(fields: [helmetId], references: [id], onDelete: Cascade)
+  rider  User?   @relation(fields: [riderId], references: [id], onDelete: SetNull)
+  ride   Ride?   @relation(fields: [rideId], references: [id], onDelete: SetNull)
+  alerts Alert[]
+
+  @@index([helmetId, timestamp])
+  @@index([isResolved])
+  @@map("violations")
+}
+
+model Alert {
+  id          String      @id @default(uuid())
+  violationId String      @map("violation_id")
+  message     String
+  sentTo      String?     @map("sent_to")
+  status      AlertStatus @default(PENDING)
+  sentAt      DateTime?   @map("sent_at")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  violation Violation @relation(fields: [violationId], references: [id], onDelete: Cascade)
+
+  @@map("alerts")
+}
+
+model DeviceKey {
+  id         String    @id @default(uuid())
+  deviceCode String    @unique @map("device_code")
+  apiKey     String    @unique @map("api_key")
+  deviceType String    @map("device_type")
+  isActive   Boolean   @default(true) @map("is_active")
+  lastUsedAt DateTime? @map("last_used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@map("device_keys")
+}
