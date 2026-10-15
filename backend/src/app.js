@@ -16,6 +16,7 @@ import bikeRoutes from './routes/bikeRoutes.js';
 import sensorRoutes from './routes/sensorRoutes.js';
 import violationRoutes from './routes/violationRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
+import simulatorRoutes from './routes/simulatorRoutes.js';
 
 const app = express();
 
@@ -52,6 +53,7 @@ app.use('/api/bikes', bikeRoutes);
 app.use('/api/sensor', sensorRoutes);
 app.use('/api/violations', violationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/simulator', simulatorRoutes);
 
 // ---------- 404 + Error Handlers ----------
 app.use(notFoundHandler);

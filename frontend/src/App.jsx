@@ -17,6 +17,7 @@ import Bikes from './pages/Bikes.jsx';
 import Violations from './pages/Violations.jsx';
 import Settings from './pages/Settings.jsx';
 import Profile from './pages/Profile.jsx';
+import Simulator from './pages/Simulator.jsx';
 import NotFound from './pages/NotFound.jsx';
 
 // Layout
@@ -39,6 +40,7 @@ export default function App() {
               <Route path="/helmets" element={<Helmets />} />
               <Route path="/bikes" element={<Bikes />} />
               <Route path="/violations" element={<Violations />} />
+              <Route path="/simulator" element={<Simulator />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/settings" element={<Settings />} />
             </Route>

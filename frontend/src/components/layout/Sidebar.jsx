@@ -1,5 +1,5 @@
 // ==================================================
-// Sidebar — Green theme + mobile drawer
+// Sidebar — Green theme + mobile drawer + admin tools
 // ==================================================
 
 import { NavLink, useNavigate } from 'react-router-dom';
@@ -12,6 +12,7 @@ import {
   LogOut,
   User,
   X,
+  FlaskConical,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 
@@ -21,6 +22,7 @@ const navItems = [
   { to: '/helmets', label: 'Helmets', icon: HardHat },
   { to: '/bikes', label: 'Bikes', icon: Bike },
   { to: '/violations', label: 'Violations', icon: AlertTriangle },
+  { to: '/simulator', label: 'Simulator', icon: FlaskConical, adminOnly: true },
 ];
 
 export default function Sidebar({ isOpen = false, onClose = () => {} }) {
@@ -38,6 +40,11 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
     .join('')
     .slice(0, 2)
     .toUpperCase();
+
+  // Filter nav items by role — admin-only items hidden for non-admins
+  const visibleItems = navItems.filter(
+    (item) => !item.adminOnly || user?.role === 'ADMIN'
+  );
 
   return (
     <>
@@ -84,7 +91,7 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
-          {navItems.map(({ to, label, icon: Icon }) => (
+          {visibleItems.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
