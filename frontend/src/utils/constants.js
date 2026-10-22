@@ -5,7 +5,7 @@
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 
-export const ALCOHOL_THRESHOLD = 300;
+export const ALCOHOL_THRESHOLD = 400;
 
 export const ROLES = {
   ADMIN: 'ADMIN',

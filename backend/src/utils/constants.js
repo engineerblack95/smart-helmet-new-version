@@ -2,7 +2,7 @@
 // System Constants
 // ==================================================
 
-export const ALCOHOL_THRESHOLD = 300; // raw MQ-3 reading (0-1023)
+export const ALCOHOL_THRESHOLD = 400; // raw MQ-3 reading (0-1023)
 export const RIDE_TIMEOUT_MS = 60 * 1000; // 60 seconds
 export const SENSOR_INTERVAL_MS = 500; // firmware sends every 500ms
 

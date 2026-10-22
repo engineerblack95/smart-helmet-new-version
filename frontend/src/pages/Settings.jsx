@@ -279,7 +279,7 @@ export default function Settings() {
             </div>
             <div className="flex justify-between py-2">
               <span className="text-brand-gray">Alcohol Threshold</span>
-              <span className="font-medium">300 (raw MQ-3)</span>
+              <span className="font-medium">450 (raw MQ-3)</span>
             </div>
           </div>
         </Card>
