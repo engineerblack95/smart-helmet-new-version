@@ -13,6 +13,7 @@ import {
   User,
   X,
   FlaskConical,
+  Settings,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 
@@ -23,6 +24,7 @@ const navItems = [
   { to: '/bikes', label: 'Bikes', icon: Bike },
   { to: '/violations', label: 'Violations', icon: AlertTriangle },
   { to: '/simulator', label: 'Simulator', icon: FlaskConical, adminOnly: true },
+  { to: '/settings', label: 'Settings', icon: Settings, adminOnly: true },
 ];
 
 export default function Sidebar({ isOpen = false, onClose = () => {} }) {

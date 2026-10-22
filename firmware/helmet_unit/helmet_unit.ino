@@ -6,17 +6,16 @@
 // Lights 3 status LEDs (green/yellow/red).
 // Sends packet over HC-05 Bluetooth every 500ms.
 //
-// Packet format: "H001,<worn>,<alcohol>,<battery>\n"
-//   - H001       = helmet code (fixed)
-//   - worn       = 1 if worn, 0 if not
-//   - alcohol    = raw ADC value 0-1023
-//   - battery    = simulated battery percentage 0-100
+// NEW FEATURE: EEPROM Configuration
+// You can configure the HELMET_CODE via the Serial Monitor
+// without re-uploading the code. 
 // ==================================================
 
 #include <SoftwareSerial.h>
+#include <EEPROM.h>
 
 // ==================================================
-// PIN CONFIGURATION (matches your hardware)
+// PIN CONFIGURATION
 // ==================================================
 #define MQ3_PIN        A0    // MQ-3 alcohol sensor analog output
 #define IR_PIN         2     // FC-51 IR proximity sensor digital output
@@ -24,31 +23,35 @@
 #define LED_YELLOW     4     // Yellow LED — alcohol detected
 #define LED_RED        5     // Red LED — not worn
 
-#define BT_RX          10    // HC-05 TX → Nano D10 (via voltage divider!)
-#define BT_TX          11    // HC-05 RX ← Nano D11 (direct)
+#define BT_RX          10    // HC-05 TX → Nano D10
+#define BT_TX          11    // HC-05 RX ← Nano D11
 
 // ==================================================
 // CONFIGURATION
 // ==================================================
-const char* HELMET_CODE = "H001";      // Must match DeviceKey in database
-const int   ALCOHOL_THRESHOLD = 300;   // Same as backend constant
-const unsigned long SEND_INTERVAL_MS = 500;  // 500ms as designed
+const int ALCOHOL_THRESHOLD = 300;
+const unsigned long SEND_INTERVAL_MS = 500;
 
-// HC-05 Bluetooth (software serial)
+// EEPROM Addresses to store configuration
+#define EEPROM_SIZE 32
+#define ADDR_MAGIC 0       // Tells us if the EEPROM is already initialized
+#define ADDR_HELMET_CODE 4 // Starts storing the 4-byte helmet code here
+
 SoftwareSerial bluetooth(BT_RX, BT_TX);
 
 // ==================================================
 // STATE
 // ==================================================
 unsigned long lastSendTime = 0;
-int simulatedBattery = 100;  // Simulated; replace with real ADC if you add a divider
+int simulatedBattery = 100;
+String helmetCode = "H001"; // Default
 
 // ==================================================
 // SETUP
 // ==================================================
 void setup() {
   Serial.begin(9600);
-  bluetooth.begin(9600);      // HC-05 default baud
+  bluetooth.begin(9600);
   delay(100);
 
   pinMode(IR_PIN, INPUT);
@@ -56,13 +59,16 @@ void setup() {
   pinMode(LED_YELLOW, OUTPUT);
   pinMode(LED_RED, OUTPUT);
 
-  // Startup blink test — confirms all LEDs work
+  // Load Helmet Code from EEPROM (or use default)
+  loadConfig();
+
   testLeds();
 
   Serial.println(F("=================================================="));
   Serial.println(F("  Smart Helmet — Helmet Unit Ready"));
-  Serial.println(F("  Helmet code: H001"));
-  Serial.println(F("  Sending packet every 500ms"));
+  Serial.print(F("  Helmet code: "));
+  Serial.println(helmetCode);
+  Serial.println(F("  Type 'SET: H002' to change the helmet code."));
   Serial.println(F("=================================================="));
 }
 
@@ -70,33 +76,27 @@ void setup() {
 // MAIN LOOP
 // ==================================================
 void loop() {
-  unsigned long now = millis();
+  // Check for incoming serial commands from the PC (Setup mode)
+  checkSerialConfig();
 
+  unsigned long now = millis();
   if (now - lastSendTime >= SEND_INTERVAL_MS) {
     lastSendTime = now;
 
-    // ---------- READ SENSORS ----------
-    int alcoholLevel = analogRead(MQ3_PIN);      // 0-1023
-    bool worn = isHelmetWorn();                  // true/false
-
-    // ---------- UPDATE LEDS ----------
+    int alcoholLevel = analogRead(MQ3_PIN);
+    bool worn = isHelmetWorn();
     updateLeds(worn, alcoholLevel);
 
-    // ---------- BUILD PACKET ----------
-    // Format: "H001,1,150,85\n"
-    String packet = String(HELMET_CODE) + "," +
+    // Format: "H002,1,150,85\n"
+    String packet = helmetCode + "," +
                     (worn ? "1" : "0") + "," +
                     String(alcoholLevel) + "," +
                     String(simulatedBattery) + "\n";
 
-    // ---------- SEND VIA BLUETOOTH ----------
     bluetooth.print(packet);
-
-    // ---------- DEBUG PRINT ----------
     Serial.print(F("Sent: "));
     Serial.print(packet);
 
-    // Slowly drain simulated battery (for demo purposes)
     if (simulatedBattery > 0 && now % 10000 < 500) {
       simulatedBattery -= 1;
     }
@@ -104,20 +104,75 @@ void loop() {
 }
 
 // ==================================================
+// SERIAL CONFIGURATION (Bypass re-uploading)
+// ==================================================
+void checkSerialConfig() {
+  if (Serial.available() > 0) {
+    String cmd = Serial.readStringUntil('\n');
+    cmd.trim();
+    
+    if (cmd.startsWith("SET:")) {
+      String newCode = cmd.substring(4);
+      newCode.trim();
+      newCode.toUpperCase();
+
+      if (newCode.length() >= 3 && newCode.length() <= 10) {
+        helmetCode = newCode;
+        saveConfig();
+        Serial.print(F("✅ Helmet code updated to: "));
+        Serial.println(helmetCode);
+        Serial.println(F("   Rebooting in 2 seconds..."));
+        delay(2000);
+        // Soft restart to apply cleanly
+        void (*reboot)(void) = 0;
+        reboot();
+      } else {
+        Serial.println(F("❌ Invalid code. Must be 3-10 characters (e.g. H002)"));
+      }
+    }
+  }
+}
+
+// ==================================================
+// EEPROM STORAGE
+// ==================================================
+void loadConfig() {
+  char magic = EEPROM.read(ADDR_MAGIC);
+  if (magic == 'S') {
+    // EEPROM is initialized, read the code
+    char buffer[11];
+    for (int i = 0; i < 10; i++) {
+      buffer[i] = EEPROM.read(ADDR_HELMET_CODE + i);
+    }
+    buffer[10] = '\0';
+    helmetCode = String(buffer);
+    helmetCode.trim();
+    if (helmetCode.length() == 0) helmetCode = "H001"; // Fallback
+  } else {
+    // First boot, write default
+    saveConfig();
+  }
+}
+
+void saveConfig() {
+  EEPROM.write(ADDR_MAGIC, 'S'); // Mark as initialized
+  for (int i = 0; i < 10; i++) {
+    if (i < helmetCode.length()) {
+      EEPROM.write(ADDR_HELMET_CODE + i, helmetCode[i]);
+    } else {
+      EEPROM.write(ADDR_HELMET_CODE + i, 0); // Null padding
+    }
+  }
+}
+
+// ==================================================
 // HELPERS
 // ==================================================
-
-// FC-51 IR sensor: LOW when object detected (helmet on head)
 bool isHelmetWorn() {
   return digitalRead(IR_PIN) == LOW;
 }
 
 void updateLeds(bool worn, int alcohol) {
-  // Priority: safety-first
-  // 1. Not worn → RED
-  // 2. Alcohol detected → YELLOW
-  // 3. Otherwise → GREEN (safe)
-
   if (!worn) {
     digitalWrite(LED_RED, HIGH);
     digitalWrite(LED_YELLOW, LOW);

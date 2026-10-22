@@ -17,6 +17,7 @@ import sensorRoutes from './routes/sensorRoutes.js';
 import violationRoutes from './routes/violationRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import simulatorRoutes from './routes/simulatorRoutes.js';
+import deviceKeyRoutes from './routes/deviceKeyRoutes.js';
 
 const app = express();
 
@@ -54,6 +55,7 @@ app.use('/api/sensor', sensorRoutes);
 app.use('/api/violations', violationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/simulator', simulatorRoutes);
+app.use('/api/device-keys', deviceKeyRoutes);
 
 // ---------- 404 + Error Handlers ----------
 app.use(notFoundHandler);
