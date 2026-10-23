@@ -38,6 +38,8 @@ const DEFAULTS = {
   batteryLevel: 85,
 };
 
+const ALCOHOL_THRESHOLD = 400; // 👈 CHANGED TO 400
+
 // ==================================================
 // Quick preset definitions (icons + colors + data)
 // ==================================================
@@ -264,7 +266,7 @@ export default function Simulator() {
                     </label>
                     <span
                       className={`text-lg font-bold transition-colors ${
-                        Number(form.alcoholLevel) >= 300
+                        Number(form.alcoholLevel) >= ALCOHOL_THRESHOLD
                           ? 'text-red-600'
                           : 'text-brand-green-dark'
                       }`}
@@ -283,7 +285,7 @@ export default function Simulator() {
                   />
                   <div className="flex justify-between text-xs text-brand-gray mt-1">
                     <span>0 (sober)</span>
-                    <span className="text-red-600 font-medium">300 (threshold)</span>
+                    <span className="text-red-600 font-medium">400 (threshold)</span>
                     <span>1023</span>
                   </div>
                 </div>
